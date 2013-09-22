@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@ import android.hardware.Camera;
 import android.view.View;
 
 import org.cyanogenmod.focal.CameraManager;
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 import org.cyanogenmod.focal.SettingsStorage;
 
 /**
@@ -96,7 +96,7 @@ public class ShutterSpeedWidget extends WidgetBase {
         mValueLabel.setText(getShutterSpeedDisplayValue(restoreValueFromStorage(KEY_PARAMETER)));
         if ((restoreValueFromStorage(KEY_PARAMETER) != null) &&
             (restoreValueFromStorage(KEY_PARAMETER).equals(KEY_AUTO_VALUE))) {
-            mAutoButton.setActiveDrawable(KEY_PARAMETER + ":" + KEY_AUTO_VALUE);
+            mAutoButton.activeImage(KEY_PARAMETER + ":" + KEY_AUTO_VALUE);
         }
 
         getToggleButton().setHintText(R.string.widget_shutter_speed);
@@ -146,7 +146,7 @@ public class ShutterSpeedWidget extends WidgetBase {
         SettingsStorage.storeCameraSetting(mWidget.getContext(), mCamManager.getCurrentFacing(),
                 KEY_PARAMETER, "auto");
         mValueLabel.setText(getShutterSpeedDisplayValue(KEY_AUTO_VALUE));
-        mAutoButton.setActiveDrawable(KEY_PARAMETER + ":" + KEY_AUTO_VALUE);
+        mAutoButton.activeImage(KEY_PARAMETER + ":" + KEY_AUTO_VALUE);
     }
 
 

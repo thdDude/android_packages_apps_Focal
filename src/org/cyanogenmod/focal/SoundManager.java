@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,6 +22,8 @@ package org.cyanogenmod.focal;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.SoundPool;
+
+import fr.xplod.focal.R;
 
 /**
  * Manages sounds played by the app. Since we have a limited

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  * Copyright (C) 2012 Alex Curran
  *
  * This program is free software; you can redistribute it and/or
@@ -48,7 +48,7 @@ import android.view.ViewParent;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 
 import java.lang.reflect.Field;
 

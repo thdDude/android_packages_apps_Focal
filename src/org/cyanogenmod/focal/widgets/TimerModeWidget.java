@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,7 +23,7 @@ import android.hardware.Camera;
 import android.view.View;
 
 import org.cyanogenmod.focal.CameraActivity;
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 import org.cyanogenmod.focal.feats.TimerCapture;
 
 /**
@@ -87,7 +87,7 @@ public class TimerModeWidget extends WidgetBase implements View.OnClickListener 
     private void turnOn() {
         if (!mIsEnabled || mTransformer.getTimer() == TimerCapture.VOICE_TIMER_VALUE) {
             mCameraActivity.setCaptureTransformer(mTransformer);
-            mBtnToggle.setActiveDrawable(DRAWABLE_TAG + "=on");
+            mBtnToggle.activeImage(DRAWABLE_TAG + "=on");
             mIsEnabled = true;
 
             if (mTransformer.getTimer() == TimerCapture.VOICE_TIMER_VALUE) {
@@ -135,7 +135,7 @@ public class TimerModeWidget extends WidgetBase implements View.OnClickListener 
 
             mTransformer.setTimer(TimerCapture.VOICE_TIMER_VALUE);
             mCameraActivity.setCaptureTransformer(mTransformer);
-            mBtnVoice.setActiveDrawable(DRAWABLE_TAG+"=voice");
+            mBtnVoice.activeImage(DRAWABLE_TAG + "=voice");
             mIsEnabled = true;
         }
     }

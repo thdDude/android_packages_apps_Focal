@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.util.AttributeSet;
 import android.view.View;
 
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 
 public class SavePinger extends View {
     public final static String TAG = "SavePinger";
@@ -178,6 +178,8 @@ public class SavePinger extends View {
         }
 
         mLastTime = systemTime;
-        invalidate();
+        if (getAlpha() > 0.0) {
+            invalidate();
+        }
     }
 }

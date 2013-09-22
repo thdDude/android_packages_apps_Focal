@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ import android.view.TextureView;
 import android.widget.FrameLayout;
 
 import org.cyanogenmod.focal.CameraActivity;
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 import org.cyanogenmod.focal.SnapshotManager;
 
 import java.io.File;
@@ -206,7 +206,7 @@ public class PicSphereManager implements PicSphere.ProgressListener {
     private boolean copyBinaries() {
         try {
             String files[] = {
-                    "autooptimiser", "pto_gen", "cpfind", "celeste", "multiblend", "enfuse", "nona", "pano_modify",
+                    "autooptimiser", "pto_gen", "cpfind", "multiblend", "enfuse", "nona", "pano_modify",
                     "ptclean", "tiffinfo", "align_image_stack", "pto_var",
                     "libexiv2.so", "libglib-2.0.so", "libgmodule-2.0.so", "libgobject-2.0.so",
                     "libgthread-2.0.so", "libjpeg.so", "libpano13.so", "libtiff.so", "libtiffdecoder.so",

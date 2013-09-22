@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,7 +23,7 @@ import android.hardware.Camera;
 import android.view.View;
 
 import org.cyanogenmod.focal.CameraActivity;
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 import org.cyanogenmod.focal.feats.SoftwareHdrCapture;
 
 import java.util.List;
@@ -56,7 +56,7 @@ public class SoftwareHdrWidget extends WidgetBase implements View.OnClickListene
         addViewToContainer(mBtnOff);
 
         mPreviousMode = mBtnOff;
-        mPreviousMode.setActiveDrawable(DRAWABLE_TAG+"=off");
+        mPreviousMode.activeImage(DRAWABLE_TAG + "=off");
 
         mTransformer = new SoftwareHdrCapture(mContext);
 
@@ -94,12 +94,12 @@ public class SoftwareHdrWidget extends WidgetBase implements View.OnClickListene
     public void onClick(View view) {
         if (view == mBtnOn) {
             mPreviousMode.resetImage();
-            mBtnOn.setActiveDrawable(DRAWABLE_TAG + "=on");
+            mBtnOn.activeImage(DRAWABLE_TAG + "=on");
             mPreviousMode = mBtnOn;
             mContext.setCaptureTransformer(mTransformer);
         } else if (view == mBtnOff) {
             mPreviousMode.resetImage();
-            mBtnOff.setActiveDrawable(DRAWABLE_TAG+"=off");
+            mBtnOff.activeImage(DRAWABLE_TAG + "=off");
             mPreviousMode = mBtnOff;
             mContext.setCaptureTransformer(null);
         }

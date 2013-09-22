@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,13 +27,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.HorizontalScrollView;
+import android.widget.ScrollView;
 
 import org.cyanogenmod.focal.CameraActivity;
 import org.cyanogenmod.focal.CameraCapabilities;
-import org.cyanogenmod.focal.R;
+import fr.xplod.focal.R;
 import org.cyanogenmod.focal.widgets.WidgetBase;
 
-public class SideBar extends HorizontalScrollView {
+public class SideBar extends ScrollView {
     public final static String TAG = "SideBar";
     public final static int SLIDE_ANIMATION_DURATION_MS = 300;
     private final static float BAR_MARGIN = 0;
@@ -62,7 +63,6 @@ public class SideBar extends HorizontalScrollView {
      */
     private void initialize() {
         this.setBackgroundColor(getResources().getColor(R.color.widget_background));
-        setHorizontalScrollBarEnabled(true);
         mIsOpen = true;
     }
 
@@ -73,9 +73,11 @@ public class SideBar extends HorizontalScrollView {
      */
     public void checkCapabilities(CameraActivity activity, ViewGroup widgetsContainer) {
         mToggleContainer = (ViewGroup) this.getChildAt(0);
+        ViewGroup shortcutsContainer = (ViewGroup) activity.findViewById(R.id.shortcuts_container);
 
         if (mCapabilities != null) {
             mToggleContainer.removeAllViews();
+            shortcutsContainer.removeAllViews();
             mCapabilities = null;
         }
 
@@ -83,29 +85,10 @@ public class SideBar extends HorizontalScrollView {
         Camera.Parameters params = activity.getCamManager().getParameters();
 
         if (params != null) {
-            mCapabilities.populateSidebar(params, mToggleContainer, widgetsContainer);
+            mCapabilities.populateSidebar(params, mToggleContainer,
+                    shortcutsContainer, widgetsContainer);
         } else {
             Log.e(TAG, "Parameters were null when capabilities were checked");
-        }
-    }
-
-    /**
-     * Toggles the visibility of the widget options (container)
-     *
-     * @param widget  The widget to toggle
-     * @param isFling If it should be toggled with the fling-up animation
-     */
-    public void toggleWidgetVisibility(WidgetBase widget, boolean isFling) {
-        if (widget.isOpen()) {
-            widget.close();
-            if (isFling) {
-                // fling needs to go fast, skip animation
-                // XXX: Make something more beautiful?
-                widget.getWidget().clearAnimation();
-                widget.getWidget().setAlpha(0.0f);
-            }
-        } else {
-            widget.open();
         }
     }
 

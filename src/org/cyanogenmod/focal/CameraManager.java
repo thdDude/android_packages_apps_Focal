@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,6 +49,8 @@ import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import fr.xplod.focal.R;
 
 /**
  * This class is responsible for interacting with the Camera HAL.
@@ -1048,11 +1050,12 @@ public class CameraManager {
                 if (res != null) {
                     if (res.getBoolean(R.bool.config_qualcommZslCameraMode)) {
                         if (res.getBoolean(R.bool.config_useSamsungZSL)) {
-                            mCamera.sendRawCommand(1508, 0, 0);
+                            //mCamera.sendRawCommand(1508, 0, 0);
                         }
                         params.set("camera-mode", 1);
                     }
                 }
+                mCamera.setDisplayOrientation(90);
 
                 mCamera.setParameters(params);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2013 Guillaume Lesniak
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -229,7 +229,7 @@ public class SimpleToggleWidget extends WidgetBase implements OnClickListener {
 
         mActiveButton = button;
         if (button != null) {
-            mActiveButton.setActiveDrawable(mKey + "=" + value);
+            mActiveButton.activeImage(mKey + "=" + value);
         }
     }
 
@@ -261,9 +261,9 @@ public class SimpleToggleWidget extends WidgetBase implements OnClickListener {
 
     }
 
-    /*
-     * this checks if the widget
-     * this is basically a hash (key, value pair)
+    /**
+     * This checks if the widget is enabled
+     * This is basically a hash (key, value pair)
      * @return  true if it enabled
      */
     public static boolean isWidgetEnabled(Context context,
