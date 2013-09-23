@@ -34,6 +34,7 @@ import android.media.MediaRecorder;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
@@ -82,6 +83,7 @@ public class CameraManager {
     private CameraRenderer mRenderer;
     private boolean mIsRecordingHint;
     private boolean mIsPreviewStarted;
+    private boolean mParametersBatch;
 
     public interface PreviewPauseListener {
         /**
@@ -121,35 +123,31 @@ public class CameraManager {
                         // Do nothing here
                     }
 
+                    Log.v(TAG, "Batch parameter setting starting.");
+
+                    String existingParameters = getParameters().flatten();
+
+                    // If the camera died, just forget about this.
+                    if (existingParameters == null) continue;
+
                     List<NameValuePair> copy = new ArrayList<NameValuePair>(mPendingParameters);
                     mPendingParameters.clear();
+
+                    Camera.Parameters params = getParameters();
 
                     for (NameValuePair pair : copy) {
                         String key = pair.getName();
                         String val = pair.getValue();
-                        Log.v(TAG, "Asynchronously setting parameter " + key+ " to " + val);
-                        Camera.Parameters params = getParameters();
-                        if (params == null) {
-                            // The camera died, just forget about these settings
-                            return;
-                        }
-                        String workingValue = params.get(key);
+                        Log.v(TAG, "Setting parameter " + key+ " to " + val);
+
                         params.set(key, val);
+                    }
 
-                        try {
-                            mCamera.setParameters(params);
-                        } catch (RuntimeException e) {
-                            Log.e(TAG, "Could not set parameter " + key
-                                    + " to '" + val + "', restoring '"
-                                    + workingValue + "'", e);
 
-                            // Reset the parameter back in storage
-                            SettingsStorage.storeCameraSetting(
-                                    mContext, mCurrentFacing, key, workingValue);
-
-                            // Reset the camera as it likely crashed if we reached here
-                            open(mCurrentFacing);
-                        }
+                    try {
+                        mCamera.setParameters(params);
+                    } catch (RuntimeException e) {
+                        Log.e(TAG, "Could not set parameters batch", e);
                     }
 
                     // Read them from sensor
@@ -203,7 +201,9 @@ public class CameraManager {
                     mCamera = Camera.open(cameraId);
                     Log.v(TAG, "Camera is open");
 
-                    mCamera.enableShutterSound(false);
+                    if (Build.VERSION.SDK_INT >= 17) {
+                        mCamera.enableShutterSound(false);
+                    }
                     mCamera.setPreviewCallback(mPreview);
                     mCurrentFacing = cameraId;
                     mParameters = mCamera.getParameters();
@@ -213,6 +213,13 @@ public class CameraManager {
                     for (int i = 0; i < params.length(); i += step) {
                         Log.d(TAG, params);
                         params = params.substring(step);
+                    }
+
+                    // Mako hack to raise FPS
+                    if (Build.DEVICE.equals("mako")) {
+                        Camera.Size maxSize = mParameters.getSupportedPictureSizes().get(0);
+                        mParameters.setPictureSize(maxSize.width, maxSize.height);
+                        mCamera.setParameters(mParameters);
                     }
 
                     if (mAutoFocusMoveCallback != null) {
@@ -290,12 +297,24 @@ public class CameraManager {
                 return null;
             }
 
-            if (mParameters == null) {
+            int tries = 0;
+            while (mParameters == null) {
                 try {
                     mParameters = mCamera.getParameters();
+                    break;
                 } catch (RuntimeException e) {
                     Log.e(TAG, "Error while getting parameters: ", e);
-                    return null;
+                    if (tries < 3) {
+                        tries++;
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e1) {
+                            e1.printStackTrace();
+                        }
+                    } else {
+                        Log.e(TAG, "Failed to get parameters after 3 tries");
+                        break;
+                    }
                 }
             }
         }
@@ -394,10 +413,23 @@ public class CameraManager {
         }
     }
 
+    public void startParametersBatch() {
+        mParametersBatch = true;
+    }
+
+    public void stopParametersBatch() {
+        mParametersBatch = false;
+        synchronized (mParametersThread) {
+            mParametersThread.notifyAll();
+        }
+    }
+
     public void setParameterAsync(String key, String value) {
         synchronized (mParametersThread) {
             mPendingParameters.add(new BasicNameValuePair(key, value));
-            mParametersThread.notifyAll();
+            if (!mParametersBatch) {
+                mParametersThread.notifyAll();
+            }
         }
     }
 
@@ -470,20 +502,26 @@ public class CameraManager {
         int previewHeight = previewSize.height;
 
         // Convert YUV420SP preview data to RGB
-        if (data != null && data.length > 8) {
-            Bitmap bitmap = Util.decodeYUV420SP(mContext, data, previewWidth, previewHeight);
-            if (mCurrentFacing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                // Frontcam has the image flipped, flip it back to not look weird in portrait
-                Matrix m = new Matrix();
-                m.preScale(-1, 1);
-                Bitmap dst = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
-                        bitmap.getHeight(), m, false);
-                bitmap.recycle();
-                bitmap = dst;
-            }
+        try {
+            if (data != null && data.length > 8) {
+                Bitmap bitmap = Util.decodeYUV420SP(mContext, data, previewWidth, previewHeight);
+                if (mCurrentFacing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                    // Frontcam has the image flipped, flip it back to not look weird in portrait
+                    Matrix m = new Matrix();
+                    m.preScale(-1, 1);
+                    Bitmap dst = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(),
+                            bitmap.getHeight(), m, false);
+                    bitmap.recycle();
+                    bitmap = dst;
+                }
 
-            return bitmap;
-        } else {
+                return bitmap;
+            } else {
+                return null;
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // TODO: FIXME: On some devices, the resolution of the preview might abruptly change,
+            // thus the YUV420SP data is not the size we expect, causing OOB exception
             return null;
         }
     }
@@ -532,7 +570,12 @@ public class CameraManager {
         if (mCamera != null) {
             new Thread() {
                 public void run() {
-                    mCamera.takePicture(shutterCallback, raw, jpeg);
+                    try {
+                        mCamera.takePicture(shutterCallback, raw, jpeg);
+                    } catch (RuntimeException e) {
+                        Log.e(TAG, "Unable to take picture", e);
+                        CameraActivity.notify("Unable to take picture", 1000);
+                    }
                 }
             }.start();
         }
@@ -575,7 +618,12 @@ public class CameraManager {
 
     public void startVideoRecording() {
         Log.v(TAG, "startVideoRecording");
-        mMediaRecorder.start();
+        try {
+            mMediaRecorder.start();
+        } catch (Exception e) {
+            Log.e(TAG, "Unable to start recording", e);
+            CameraActivity.notify("Error while starting recording", 1000);
+        }
         mPreview.postCallbackBuffer();
     }
 
@@ -603,6 +651,7 @@ public class CameraManager {
      * @param orientation The orientation, in degrees
      */
     public void setOrientation(int orientation) {
+        orientation += 90;
         if (mOrientation == orientation) return;
 
         mOrientation = orientation;
@@ -619,7 +668,7 @@ public class CameraManager {
             rotation = (info.orientation + orientation) % 360;
         }
 
-        setParameterAsync("rotation", Integer.toString(rotation));
+        //setParameterAsync("rotation", Integer.toString(rotation));
     }
 
     public void restartPreviewIfNeeded() {
@@ -871,7 +920,7 @@ public class CameraManager {
     public void setFocusPoint(int x, int y) {
         Camera.Parameters params = getParameters();
 
-        if (params.getMaxNumFocusAreas() > 0) {
+        if (params != null && params.getMaxNumFocusAreas() > 0) {
             List<Camera.Area> focusArea = new ArrayList<Camera.Area>();
             focusArea.add(new Camera.Area(new Rect(x, y, x + FOCUS_WIDTH, y + FOCUS_HEIGHT), 1000));
 
@@ -917,7 +966,11 @@ public class CameraManager {
         List<String> focusModes = mParameters.getSupportedFocusModes();
         if (mCamera != null && focusModes != null && focusModes.contains(
                 Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
-            mCamera.setAutoFocusMoveCallback(cb);
+            try {
+                mCamera.setAutoFocusMoveCallback(cb);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Unable to set AutoFocusMoveCallback", e);
+            }
         }
     }
 
@@ -1022,8 +1075,10 @@ public class CameraManager {
                             safeStartPreview();
                             postCallbackBuffer();
                         }
+                    } catch (RuntimeException e) {
+                        Log.e(TAG, "Cannot set preview texture", e);
                     } catch (IOException e) {
-                        Log.e(TAG, "Error setting camera preview: " + e.getMessage());
+                        Log.e(TAG, "Error setting camera preview", e);
                     }
                 }
             }
@@ -1033,7 +1088,7 @@ public class CameraManager {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    if (mCamera != null) {
+                    if (mCamera != null && !mPauseCopyFrame) {
                         mCamera.addCallbackBuffer(mLastFrameBytes);
                         mCamera.setPreviewCallbackWithBuffer(CameraPreview.this);
                     }

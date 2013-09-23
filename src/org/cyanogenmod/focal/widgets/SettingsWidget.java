@@ -137,10 +137,15 @@ public class SettingsWidget extends WidgetBase {
             mNumberPicker = new NumberPicker(mContext);
             String[] names = new String[mResolutionsName.size()];
             mResolutionsName.toArray(names);
-            mNumberPicker.setDisplayedValues(names);
+            if (names.length > 0) {
+                mNumberPicker.setDisplayedValues(names);
 
-            mNumberPicker.setMinValue(0);
-            mNumberPicker.setMaxValue(names.length - 1);
+                mNumberPicker.setMinValue(0);
+                mNumberPicker.setMaxValue(names.length - 1);
+            } else {
+                mNumberPicker.setMinValue(0);
+                mNumberPicker.setMaxValue(0);
+            }
             mNumberPicker.setWrapSelectorWheel(false);
             mNumberPicker.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
             mNumberPicker.setFormatter(new NumberPicker.Formatter() {
@@ -150,10 +155,12 @@ public class SettingsWidget extends WidgetBase {
                 }
             });
 
-            for (int i = 0; i < mResolutions.size(); i++) {
-                if (mResolutions.get(i).equals(actualSz)) {
-                    mNumberPicker.setValue(i);
-                    break;
+            if (mResolutions != null) {
+                for (int i = 0; i < mResolutions.size(); i++) {
+                    if (mResolutions.get(i).equals(actualSz)) {
+                        mNumberPicker.setValue(i);
+                        break;
+                    }
                 }
             }
 
@@ -265,6 +272,14 @@ public class SettingsWidget extends WidgetBase {
                         mVideoResolutions.add("352x288");
                     }
                 }
+            } else if (mResolutions == null || mResolutions.size() == 0) {
+                // We detected no compatible video resolution! We add default ones.
+                mResolutionsName.add(mContext.getString(R.string.video_res_1080p));
+                mVideoResolutions.add("1920x1080");
+                mResolutionsName.add(mContext.getString(R.string.video_res_720p));
+                mVideoResolutions.add("1280x720");
+                mResolutionsName.add(mContext.getString(R.string.video_res_480p));
+                mVideoResolutions.add("720x480");
             }
         }
 

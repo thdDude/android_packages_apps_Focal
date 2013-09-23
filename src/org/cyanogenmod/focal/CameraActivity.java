@@ -473,7 +473,11 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
 
         // Reload pictures in the ReviewDrawer
         mReviewDrawer.updateFromGallery(newMode != CAMERA_MODE_VIDEO, 0);
-        updateCapabilities();
+        mHandler.post(new Runnable() {
+            public void run() {
+                updateCapabilities();
+            }
+        });
     }
 
     /**
@@ -488,7 +492,7 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
         }
         mCaptureTransformer = transformer;
 
-        if (mCaptureTransformer != null) {
+        if (mCaptureTransformer != null && mSnapshotManager != null) {
             mSnapshotManager.addListener(transformer);
         }
     }
@@ -523,6 +527,8 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
                         mHandler.postDelayed(this, 100);
                     }
                 } else {
+                    mCamManager.startParametersBatch();
+
                     // Close all widgets
                     mWidgetRenderer.closeAllWidgets();
 
@@ -535,6 +541,8 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
 
                     // Set orientation
                     updateInterfaceOrientation();
+
+                    mCamManager.stopParametersBatch();
                 }
             }
         });
@@ -808,7 +816,9 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
      * Turns off the panorama (mosaic) subsystem
      */
     public void resetPanorama() {
-        mMosaicProxy.tearDown();
+        if (mMosaicProxy != null) {
+            mMosaicProxy.tearDown();
+        }
         setGLRenderer(mCamManager.getRenderer());
     }
 
@@ -1052,6 +1062,8 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
                 }
             }, 500);
 
+            if (mSnapshotManager == null) return;
+
             // If we have a capture transformer, apply it, otherwise use the default
             // behavior.
             if (mCaptureTransformer != null) {
@@ -1079,7 +1091,9 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
                 mCaptureTransformer.onShutterButtonLongPressed(mShutterButton);
             } else {
                 mIsShutterLongClicked = true;
-                mFocusManager.checkFocus();
+                if (mFocusManager != null) {
+                    mFocusManager.checkFocus();
+                }
             }
             return true;
         }
@@ -1184,8 +1198,10 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
         public void onSnapshotProcessing(SnapshotManager.SnapshotInfo info) {
             runOnUiThread(new Runnable() {
                 public void run() {
-                    mSavePinger.setPingMode(SavePinger.PING_MODE_ENHANCER);
-                    mSavePinger.startSaving();
+                    if (mSavePinger != null) {
+                        mSavePinger.setPingMode(SavePinger.PING_MODE_ENHANCER);
+                        mSavePinger.startSaving();
+                    }
                 }
             });
         }
@@ -1331,8 +1347,10 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
             // A single tap equals to touch-to-focus in photo/video
             if ((mCameraMode == CAMERA_MODE_PHOTO && !mIsFullscreenShutter)
                     || mCameraMode == CAMERA_MODE_VIDEO) {
-                mFocusHudRing.setPosition(e.getRawX(), e.getRawY());
-                mFocusManager.refocus();
+                if (mFocusManager != null) {
+                    mFocusHudRing.setPosition(e.getRawX(), e.getRawY());
+                    mFocusManager.refocus();
+                }
             } else if (mCameraMode == CAMERA_MODE_PHOTO && mIsFullscreenShutter) {
                 // We are in fullscreen shutter mode, so just take a picture
                 mSnapshotManager.queueSnapshot(true, 0);
@@ -1436,6 +1454,8 @@ public class CameraActivity extends Activity implements CameraManager.CameraRead
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
             Camera.Parameters params = mCamManager.getParameters();
+
+            if (params == null) return false;
 
             if (detector.getScaleFactor() > 1.0f) {
                 params.setZoom(Math.min(params.getZoom() + 1, params.getMaxZoom()));

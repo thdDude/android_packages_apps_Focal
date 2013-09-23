@@ -83,16 +83,21 @@ public class FocusHudRing extends HudRing {
 
 
     private void applyFocusPoint() {
-        float centerPointX = getX() + getWidth() / 2.0f;
-        float centerPointY = getY() + getHeight() / 2.0f;
+        // We swap X/Y as we have a landscape preview in portrait mode
+        float centerPointX = getHeight() - getY() + getHeight() / 2.0f;
+        float centerPointY = getX() + getWidth() / 2.0f;
 
-        centerPointX *= 1000.0f / ((ViewGroup) getParent()).getWidth();
-        centerPointY *= 1000.0f / ((ViewGroup) getParent()).getHeight();
+        centerPointX *= 1000.0f / ((ViewGroup) getParent()).getHeight();
+        centerPointY *= 1000.0f / ((ViewGroup) getParent()).getWidth();
 
         centerPointX = (centerPointX - 500.0f) * 2.0f;
         centerPointY = (centerPointY - 500.0f) * 2.0f;
 
-        mCamManager.setFocusPoint((int) centerPointX, (int) centerPointY);
+        // The CamManager might be null if users try to tap the preview area, when the
+        // camera is actually not yet ready
+        if (mCamManager != null) {
+            mCamManager.setFocusPoint((int) centerPointX, (int) centerPointY);
+        }
     }
 
     @Override

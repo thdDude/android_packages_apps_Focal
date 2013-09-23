@@ -23,6 +23,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.CursorIndexOutOfBoundsException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
@@ -206,9 +207,14 @@ public class SnapshotManager {
 
             // Calculate the width and the height of the jpeg.
             final Camera.Size s = mCameraManager.getParameters().getPictureSize();
-            int orientation = Exif.getOrientation(jpegData) - mCameraManager.getOrientation();
+            int orientation = mCameraManager.getOrientation();
             final int width = s.width,
                     height = s.height;
+
+            if (mSnapshotsQueue.size() == 0) {
+                Log.e(TAG, "DERP! Why is snapshotqueue empty? Two JPEG callbacks!?");
+                return;
+            }
 
             final SnapshotInfo snap = mSnapshotsQueue.get(0);
 
@@ -233,6 +239,7 @@ public class SnapshotManager {
                 while (orientation < 0) {
                     orientation += 360;
                 }
+                orientation = orientation % 360;
 
                 final int correctedOrientation = orientation;
                 final byte[] finalData = jpegData;
@@ -264,34 +271,56 @@ public class SnapshotManager {
                             // XXX: PixelBuffer has to be created every time because the GL context
                             // can only be used from its original thread. It's not very intense, but
                             // ideally we would be re-using the same thread every time.
-                            mOffscreenGL = new PixelBuffer(mContext, s.width, s.height);
-                            mAutoPicEnhancer = new AutoPictureEnhancer(mContext);
-                            mOffscreenGL.setRenderer(mAutoPicEnhancer);
-                            mAutoPicEnhancer.setTexture(BitmapFactory.decodeByteArray(finalData,
-                                    0, finalData.length));
+                            try {
+                                mOffscreenGL = new PixelBuffer(mContext, s.width, s.height);
+                                mAutoPicEnhancer = new AutoPictureEnhancer(mContext);
+                                mOffscreenGL.setRenderer(mAutoPicEnhancer);
+                                mAutoPicEnhancer.setTexture(BitmapFactory.decodeByteArray(finalData,
+                                        0, finalData.length));
 
-                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                            mOffscreenGL.getBitmap().compress(Bitmap.CompressFormat.JPEG, 90, baos);
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                mOffscreenGL.getBitmap().compress(Bitmap.CompressFormat.JPEG, 90, baos);
 
-                            if (mImageSaver != null) {
-                                mImageSaver.addImage(baos.toByteArray(), uri, title, null,
-                                        width, height, correctedOrientation, tagsList, snap);
-                            } else {
-                                Log.e(TAG, "ImageSaver was null: couldn't save image!");
+                                if (mImageSaver != null) {
+                                    mImageSaver.addImage(baos.toByteArray(), uri, title, null,
+                                            width, height, correctedOrientation, tagsList, snap);
+                                } else {
+                                    Log.e(TAG, "ImageSaver was null: couldn't save image!");
+                                }
+
+                                if (mPaused && mImageSaver != null) {
+                                    // We were paused, stop the saver now
+                                    mImageSaver.finish();
+                                    mImageSaver = null;
+                                }
+
+                                mImageIsProcessing = false;
                             }
+                            catch (Exception e) {
+                                // The rendering failed, the device might not be compatible for
+                                // whatever reason. We just save the original file.
+                                if (mImageSaver != null) {
+                                    mImageSaver.addImage(finalData, uri, title, null,
+                                            width, height, correctedOrientation, snap);
+                                }
 
-                            if (mPaused) {
-                                // We were paused, stop the saver now
-                                mImageSaver.finish();
-                                mImageSaver = null;
+                                CameraActivity.notify("Auto-enhance failed: Original shot saved", 2000);
                             }
+                            catch (OutOfMemoryError e) {
+                                // The rendering failed, the device might not be compatible for
+                                // whatever reason. We just save the original file.
+                                if (mImageSaver != null) {
+                                    mImageSaver.addImage(finalData, uri, title, null,
+                                            width, height, correctedOrientation, snap);
+                                }
 
-                            mImageIsProcessing = false;
+                                CameraActivity.notify("Error: Out of memory. Original shot saved", 2000);
+                            }
                         }
                     }.start();
                 } else {
                     // Just save it as is
-                    mImageSaver.addImage(jpegData, uri, title, null,
+                    mImageSaver.addImage(finalData, uri, title, null,
                             width, height, correctedOrientation, snap);
                 }
             }
@@ -865,6 +894,8 @@ public class SnapshotManager {
                         exifIf.saveAttributes();
                     } catch (IOException e) {
                         Log.e(TAG, "Couldn't write exif", e);
+                    } catch (CursorIndexOutOfBoundsException e) {
+                        Log.e(TAG, "Couldn't find original picture", e);
                     }
                 }
 
